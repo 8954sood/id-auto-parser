@@ -12,8 +12,8 @@ export function runPipeline(input: string, mode: 'analyze' | 'decode' = 'analyze
   if (trimmed.length === 0) {
     return makeErrorResponse(input, '', 'EMPTY', '입력이 비어있습니다', 'ID 문자열을 입력해주세요');
   }
-  if (trimmed.length > 512) {
-    return makeErrorResponse(input, trimmed, 'TOO_LONG', '입력이 너무 깁니다 (최대 512자)', '512자 이내로 입력해주세요');
+  if (trimmed.length > 2048) {
+    return makeErrorResponse(input, trimmed, 'TOO_LONG', '입력이 너무 깁니다 (최대 2048자)', '2048자 이내로 입력해주세요');
   }
 
   // Step 1: Prefilter

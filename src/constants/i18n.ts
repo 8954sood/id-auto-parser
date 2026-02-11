@@ -3,7 +3,7 @@ export const LABELS = {
   appSubtitle: 'ID 타입 자동 판별 · 구조 분석 · 인코딩 디코딩',
   inputPlaceholder: 'ID 또는 인코딩된 문자열을 붙여넣으세요 (예: UUID, ULID, Base64...)',
   analyzeButton: '분석',
-  charCount: (n: number) => `${n}/512`,
+  charCount: (n: number) => `${n}/2048`,
   tabs: {
     summary: '요약',
     details: '상세',
@@ -48,7 +48,7 @@ export const LABELS = {
   },
   errors: {
     EMPTY: '입력이 비어있습니다',
-    TOO_LONG: '입력이 너무 깁니다 (최대 512자)',
+    TOO_LONG: '입력이 너무 깁니다 (최대 2048자)',
     UNKNOWN: '알 수 없는 ID 타입입니다',
     INVALID: '유효하지 않은 ID입니다',
     AMBIGUOUS: '여러 ID 타입으로 해석될 수 있습니다',

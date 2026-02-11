@@ -10,7 +10,7 @@ describe('pipeline end-to-end', () => {
   });
 
   it('handles too long input', () => {
-    const result = inspect('a'.repeat(513));
+    const result = inspect('a'.repeat(2049));
     expect(result.valid).toBe(false);
     expect(result.error?.code).toBe('TOO_LONG');
   });
