@@ -17,6 +17,32 @@ function bytesToUtf8(bytes: Uint8Array): string | null {
   }
 }
 
+// eslint-disable-next-line no-control-regex
+const NON_PRINTABLE_RE = /[\x00-\x08\x0e-\x1f\x7f]/;
+
+const SPECIFICITY: Record<DecodingType, number> = {
+  hex: 3,
+  base32std: 2,
+  base58: 2,
+  base32: 1,
+  base32hex: 1,
+  base64: 0,
+  base62: 0,
+};
+
+function scoreEntry(entry: DecodedEntry, hasPadding: boolean): number {
+  let s = 0;
+  if (entry.decoded_text !== null) {
+    s += 10;
+    if (!NON_PRINTABLE_RE.test(entry.decoded_text)) s += 10;
+  }
+  if (hasPadding && (entry.encoding === 'base32std' || entry.encoding === 'base64')) {
+    s += 5;
+  }
+  s += SPECIFICITY[entry.encoding];
+  return s;
+}
+
 function makeEntry(encoding: DecodingType, bytes: Uint8Array): DecodedEntry {
   return {
     encoding,
@@ -104,6 +130,9 @@ export function decode(input: string): DecodeResult {
   if (entries.length === 0) {
     return { input, entries: [], error: '디코딩할 수 없는 형식입니다' };
   }
+
+  const hasPadding = /=+$/.test(trimmed);
+  entries.sort((a, b) => scoreEntry(b, hasPadding) - scoreEntry(a, hasPadding));
 
   return { input, entries };
 }

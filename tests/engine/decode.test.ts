@@ -113,4 +113,32 @@ describe('decode', () => {
     expect(base58!.decoded_bytes[0]).toBe(0);
     expect(base58!.decoded_bytes[1]).toBe(0);
   });
+
+  describe('ranking', () => {
+    it('hex with readable text ranks first for pure hex input', () => {
+      // 48656c6c6f = "Hello" in hex
+      const result = decode('48656c6c6f');
+      expect(result.entries[0].encoding).toBe('hex');
+    });
+
+    it('base32std with padding ranks first over base64', () => {
+      // ORSXG5DUMVZXI=== has 3 padding chars (not valid base64)
+      const result = decode('ORSXG5DUMVZXI===');
+      expect(result.entries[0].encoding).toBe('base32std');
+    });
+
+    it('base64 producing readable text ranks above base32 producing binary', () => {
+      // dGVzdA== is base64 for "test"
+      const result = decode('dGVzdA==');
+      expect(result.entries[0].encoding).toBe('base64');
+      expect(result.entries[0].decoded_text).toBe('test');
+    });
+
+    it('encoding producing readable UTF-8 ranks above one producing binary', () => {
+      // JBSWY3DP: base32std→"Hello", base64→binary
+      const result = decode('JBSWY3DP');
+      expect(result.entries[0].encoding).toBe('base32std');
+      expect(result.entries[0].decoded_text).toBe('Hello');
+    });
+  });
 });
