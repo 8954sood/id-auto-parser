@@ -1,7 +1,7 @@
 export const LABELS = {
   appTitle: 'ID 자동 분석기',
-  appSubtitle: 'ID 문자열을 입력하면 타입을 자동 판별하고 구조를 분석합니다',
-  inputPlaceholder: 'ID 문자열을 붙여넣으세요 (예: UUID, ULID, Snowflake...)',
+  appSubtitle: 'ID 타입 자동 판별 · 구조 분석 · 인코딩 디코딩',
+  inputPlaceholder: 'ID 또는 인코딩된 문자열을 붙여넣으세요 (예: UUID, ULID, Base64...)',
   analyzeButton: '분석',
   charCount: (n: number) => `${n}/512`,
   tabs: {
@@ -55,13 +55,19 @@ export const LABELS = {
   },
   ambiguousCandidates: '후보 목록',
   executeButton: '실행',
+  smartAnalysis: {
+    label: 'ID 자동 추론',
+    description: '입력 시 자동 실행 · 인코딩된 ID도 감지',
+  },
   decodeMode: {
     encoding: '감지된 인코딩',
     byteLength: '바이트 길이',
     bitLength: '비트 길이',
     utf8Text: 'UTF-8 텍스트',
     hexString: 'Hex',
-    nonPrintable: '(비출력 문자 포함)',
+    nonPrintable: '비출력 문자 포함',
     noDecodable: '디코딩할 수 없는 형식입니다',
+    bestMatch: '최적 해석',
+    otherInterpretations: '다른 해석',
   },
 } as const;

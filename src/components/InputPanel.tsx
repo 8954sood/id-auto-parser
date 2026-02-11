@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { LABELS } from '../constants/i18n';
 
@@ -8,23 +8,23 @@ interface InputPanelProps {
 
 export function InputPanel({ onAnalyze }: InputPanelProps) {
   const [value, setValue] = useState('');
-  const [autoAnalyze, setAutoAnalyze] = useState(true);
+  const [autoAnalyze, setAutoAnalyze] = useState(false);
+  const modeRef = useRef(autoAnalyze);
+  modeRef.current = autoAnalyze;
 
-  const debouncedAnalyze = useDebounce((text: string) => {
+  const debouncedAction = useDebounce((text: string) => {
     if (text.trim().length > 0) {
-      onAnalyze(text, 'analyze');
+      onAnalyze(text, modeRef.current ? 'analyze' : 'decode');
     }
-  }, 500);
+  }, 300);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value.slice(0, 512);
       setValue(newValue);
-      if (autoAnalyze) {
-        debouncedAnalyze(newValue);
-      }
+      debouncedAction(newValue);
     },
-    [autoAnalyze, debouncedAnalyze],
+    [debouncedAction],
   );
 
   const handleActionClick = useCallback(() => {
@@ -61,13 +61,16 @@ export function InputPanel({ onAnalyze }: InputPanelProps) {
         </span>
       </div>
       <div className="input-actions">
-        <label className="auto-analyze-toggle">
+        <label className="auto-analyze-toggle" title={LABELS.smartAnalysis.description}>
           <input
             type="checkbox"
             checked={autoAnalyze}
             onChange={(e) => setAutoAnalyze(e.target.checked)}
           />
-          자동 분석
+          <span className="toggle-label">
+            {LABELS.smartAnalysis.label}
+            <span className="toggle-description">{LABELS.smartAnalysis.description}</span>
+          </span>
         </label>
         <button
           className="analyze-button"
