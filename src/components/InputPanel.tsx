@@ -20,7 +20,7 @@ export function InputPanel({ onAnalyze }: InputPanelProps) {
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value.slice(0, 2048);
+      const newValue = e.target.value;
       setValue(newValue);
       debouncedAction(newValue);
     },
@@ -53,7 +53,6 @@ export function InputPanel({ onAnalyze }: InputPanelProps) {
           onKeyDown={handleKeyDown}
           placeholder={LABELS.inputPlaceholder}
           rows={2}
-          maxLength={2048}
           aria-label="ID 입력"
         />
         <span className="char-count" aria-live="polite">
