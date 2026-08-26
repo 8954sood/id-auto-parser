@@ -28,6 +28,34 @@ describe('decode', () => {
     expect(hex!.hex_string).toBe('48656c6c6f');
   });
 
+  it('decodes JSON-style Unicode escapes', () => {
+    const result = decode('\\ud655\\uc778\\ud588\\uc2b5\\ub2c8\\ub2e4');
+    const unicode = result.entries.find((e) => e.encoding === 'unicode-escape');
+    expect(unicode).toBeDefined();
+    expect(unicode!.decoded_text).toBe('확인했습니다');
+    expect(result.entries[0].encoding).toBe('unicode-escape');
+  });
+
+  it('decodes Unicode escapes mixed with JSON string escapes', () => {
+    const result = decode('\\uc548\\ub155\\n\\"world\\"\\t\\u0021');
+    const unicode = result.entries.find((e) => e.encoding === 'unicode-escape');
+    expect(unicode).toBeDefined();
+    expect(unicode!.decoded_text).toBe('안녕\n"world"\t!');
+  });
+
+  it('decodes UTF-16 surrogate pairs in Unicode escapes', () => {
+    const result = decode('emoji: \\ud83d\\ude00');
+    const unicode = result.entries.find((e) => e.encoding === 'unicode-escape');
+    expect(unicode).toBeDefined();
+    expect(unicode!.decoded_text).toBe('emoji: 😀');
+  });
+
+  it('does not treat malformed Unicode escapes as decodable', () => {
+    const result = decode('\\ud83d');
+    expect(result.entries.find((e) => e.encoding === 'unicode-escape')).toBeUndefined();
+    expect(result.error).toBeTruthy();
+  });
+
   it('decodes Crockford Base32', () => {
     const result = decode('91JPRV3F');
     const base32 = result.entries.find((e) => e.encoding === 'base32');
