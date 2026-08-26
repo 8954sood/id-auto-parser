@@ -70,7 +70,7 @@ export type ParserFn = (
   bytes?: Uint8Array,
 ) => ParseResult;
 
-export type DecodingType = 'base64' | 'hex' | 'base32' | 'base32std' | 'base32hex' | 'base58' | 'base62';
+export type DecodingType = 'unicode-escape' | 'base64' | 'hex' | 'base32' | 'base32std' | 'base32hex' | 'base58' | 'base62';
 
 export interface DecodedEntry {
   encoding: DecodingType;

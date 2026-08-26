@@ -1,6 +1,6 @@
 # ID Auto Parser
 
-ID 문자열을 자동으로 판별하고 구조를 분석하는 웹 도구입니다. 다양한 인코딩(Base64, Hex, Base32, Base58 등)의 디코딩도 지원합니다.
+ID 문자열을 자동으로 판별하고 구조를 분석하는 웹 도구입니다. 다양한 인코딩(Base64, Hex, Base32, Base58 등)과 JSON 스타일 Unicode escape의 디코딩도 지원합니다.
 
 **https://8954sood.github.io/id-auto-parser/**
 
@@ -23,6 +23,7 @@ ID 문자열을 자동으로 판별하고 구조를 분석하는 웹 도구입�
 
 | 인코딩 | 설명 |
 |--------|------|
+| Unicode Escape | JSON 스타일 `\uXXXX`, surrogate pair, `\n`, `\t`, `\\`, `\"` 등 |
 | Base64 | 표준 + URL-safe |
 | Hex | 16진수 문자열 |
 | Base32 (RFC 4648) | A-Z, 2-7 |

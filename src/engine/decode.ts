@@ -7,6 +7,7 @@ import { decodeBase62ToBytes } from './utils/base62';
 
 const BASE64_STANDARD_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 const BASE64_URL_RE = /^[A-Za-z0-9_-]+={0,2}$/;
+const HEX4_RE = /^[0-9a-fA-F]{4}$/;
 
 function bytesToUtf8(bytes: Uint8Array): string | null {
   try {
@@ -17,10 +18,90 @@ function bytesToUtf8(bytes: Uint8Array): string | null {
   }
 }
 
+function decodeUnicodeEscapes(input: string): string | null {
+  let output = '';
+  let changed = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (char !== '\\' || i + 1 >= input.length) {
+      output += char;
+      continue;
+    }
+
+    const escape = input[i + 1];
+
+    if (escape === 'u') {
+      const hex = input.slice(i + 2, i + 6);
+      if (!HEX4_RE.test(hex)) {
+        output += char;
+        continue;
+      }
+
+      const codeUnit = Number.parseInt(hex, 16);
+
+      // Decode valid UTF-16 surrogate pairs as one Unicode code point.
+      if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+        const nextPrefix = input.slice(i + 6, i + 8);
+        const lowHex = input.slice(i + 8, i + 12);
+        if (nextPrefix === '\\u' && HEX4_RE.test(lowHex)) {
+          const low = Number.parseInt(lowHex, 16);
+          if (low >= 0xdc00 && low <= 0xdfff) {
+            const codePoint = 0x10000 + ((codeUnit - 0xd800) << 10) + (low - 0xdc00);
+            output += String.fromCodePoint(codePoint);
+            i += 11;
+            changed = true;
+            continue;
+          }
+        }
+
+        // Preserve malformed/unpaired surrogate escapes verbatim.
+        output += input.slice(i, i + 6);
+        i += 5;
+        continue;
+      }
+
+      if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+        output += input.slice(i, i + 6);
+        i += 5;
+        continue;
+      }
+
+      output += String.fromCharCode(codeUnit);
+      i += 5;
+      changed = true;
+      continue;
+    }
+
+    const simpleEscapes: Record<string, string> = {
+      '"': '"',
+      '\\': '\\',
+      '/': '/',
+      b: '\b',
+      f: '\f',
+      n: '\n',
+      r: '\r',
+      t: '\t',
+    };
+
+    if (Object.hasOwn(simpleEscapes, escape)) {
+      output += simpleEscapes[escape];
+      i += 1;
+      changed = true;
+      continue;
+    }
+
+    output += char;
+  }
+
+  return changed ? output : null;
+}
+
 // eslint-disable-next-line no-control-regex
 const NON_PRINTABLE_RE = /[\x00-\x08\x0e-\x1f\x7f]/;
 
 const SPECIFICITY: Record<DecodingType, number> = {
+  'unicode-escape': 4,
   hex: 3,
   base32std: 2,
   base58: 2,
@@ -63,15 +144,21 @@ export function decode(input: string): DecodeResult {
 
   const entries: DecodedEntry[] = [];
 
+  // 1. JSON-style Unicode/string escapes (e.g. \ud655\uc778, \n, \", surrogate pairs)
+  const unicodeDecoded = decodeUnicodeEscapes(trimmed);
+  if (unicodeDecoded !== null) {
+    entries.push(makeEntry('unicode-escape', new TextEncoder().encode(unicodeDecoded)));
+  }
+
   // Strip padding for charset checks (padding '=' is not part of the data alphabet)
   const stripped = trimmed.replace(/=+$/, '');
 
-  // 1. Pure hex (0-9a-fA-F only, even length)
+  // 2. Pure hex (0-9a-fA-F only, even length)
   if (isHex(trimmed) && trimmed.length % 2 === 0 && trimmed.length >= 2) {
     entries.push(makeEntry('hex', hexToBytes(trimmed)));
   }
 
-  // 2. Base64 (standard + URL-safe)
+  // 3. Base64 (standard + URL-safe)
   if (trimmed.length >= 4 && (BASE64_STANDARD_RE.test(trimmed) || BASE64_URL_RE.test(trimmed))) {
     try {
       const standard = trimmed.replace(/-/g, '+').replace(/_/g, '/');
@@ -87,7 +174,7 @@ export function decode(input: string): DecodeResult {
     }
   }
 
-  // 3. Standard Base32 (RFC 4648: A-Z2-7, with optional = padding)
+  // 4. Standard Base32 (RFC 4648: A-Z2-7, with optional = padding)
   if (isBase32Std(stripped) && stripped.length >= 2) {
     const bytes = decodeBase32Std(trimmed);
     if (bytes && bytes.length > 0) {
@@ -95,7 +182,7 @@ export function decode(input: string): DecodeResult {
     }
   }
 
-  // 4. Crockford Base32
+  // 5. Crockford Base32
   if (isCrockfordBase32(stripped) && stripped.length >= 2) {
     const bytes = decodeCrockfordBase32(stripped);
     if (bytes && bytes.length > 0) {
@@ -103,7 +190,7 @@ export function decode(input: string): DecodeResult {
     }
   }
 
-  // 5. Base32Hex
+  // 6. Base32Hex
   if (isBase32Hex(stripped) && stripped.length >= 2) {
     const bytes = decodeBase32Hex(stripped);
     if (bytes && bytes.length > 0) {
@@ -111,7 +198,7 @@ export function decode(input: string): DecodeResult {
     }
   }
 
-  // 6. Base58 (Bitcoin alphabet: excludes 0, O, I, l)
+  // 7. Base58 (Bitcoin alphabet: excludes 0, O, I, l)
   if (isBase58(trimmed) && trimmed.length >= 2) {
     const bytes = decodeBase58ToBytes(trimmed);
     if (bytes && bytes.length > 0) {
@@ -119,7 +206,7 @@ export function decode(input: string): DecodeResult {
     }
   }
 
-  // 7. Base62 (skip if already matched as hex — same result)
+  // 8. Base62 (skip if already matched as hex — same result)
   if (isBase62(trimmed) && !isHex(trimmed) && trimmed.length >= 2) {
     const bytes = decodeBase62ToBytes(trimmed);
     if (bytes && bytes.length > 0) {
