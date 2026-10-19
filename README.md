@@ -40,3 +40,14 @@ npm run dev
 npm run test
 npm run build
 ```
+
+## 추가 디코딩 기능
+
+- URL percent encoding, HTML named/numeric entities, JavaScript hex and codepoint escapes
+- Hex variants (`0x` prefix, separated byte pairs), Base36, Base45, Ascii85, Python Base85 and Z85
+- Base58Check (double-SHA-256 checksum verification)
+- JWT compact-format Header/Payload inspection with readable `iat`, `exp`, `nbf` times. **JWT signatures and claims are not verified.**
+- Decoding text encodings: UTF-8, UTF-16LE, UTF-16BE, EUC-KR/CP949
+- Up to 3 decoding layers; candidate exploration is bounded to avoid cycles and excessive work.
+
+Decoded candidates are heuristic alternatives, not a guarantee that the original text was encoded in a given format. URL form `+` as a space is not automatically assumed; percent decoding uses URI semantics.
