@@ -53,7 +53,9 @@ function PrimaryEntry({ entry }: { entry: DecodedEntry }) {
       </div>
 
       {entry.decoded_text !== null && (
-        <div className="decode-block">
+        {entry.notes?.map(note => <div key={note} className="decode-meta">{note}</div>)}
+      {entry.path && <div className="decode-meta">경로: {entry.path.join(' → ')}</div>}
+      <div className="decode-block">
           <div className="decode-block-header">
             <span className="decode-block-label">
               {dm.utf8Text}
@@ -97,7 +99,9 @@ function AltEntry({ entry }: { entry: DecodedEntry }) {
       {expanded && (
         <div className="decode-alt-body">
           {entry.decoded_text !== null && (
-            <div className="decode-block">
+            {entry.notes?.map(note => <div key={note} className="decode-meta">{note}</div>)}
+          {entry.path && <div className="decode-meta">경로: {entry.path.join(' → ')}</div>}
+          <div className="decode-block">
               <div className="decode-block-header">
                 <span className="decode-block-label">{dm.utf8Text}</span>
                 <CopyButton text={entry.decoded_text} />
