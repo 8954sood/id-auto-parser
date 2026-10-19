@@ -40,7 +40,7 @@ export function decodeTextFormats(input: string): ExtraDecode[] {
   if (/\\(?:x[0-9a-f]{2}|u\{[0-9a-f]{1,6}\})/i.test(input)) {
     let changed = false;
     const decoded = input.replace(/\\(?:x([0-9a-f]{2})|u\{([0-9a-f]{1,6})\})/gi, (raw, h: string | undefined, cp: string | undefined) => {
-      const n = Number.parseInt(h ?? cp, 16);
+      const n = Number.parseInt(h ?? cp ?? '', 16);
       if (n > 0x10ffff || (n >= 0xd800 && n <= 0xdfff)) return raw;
       changed = true;
       return String.fromCodePoint(n);
