@@ -52,6 +52,8 @@ function PrimaryEntry({ entry }: { entry: DecodedEntry }) {
         </span>
       </div>
 
+      {entry.notes?.map(note => <div key={note} className="decode-meta">{note}</div>)}
+      {entry.path && <div className="decode-meta">경로: {entry.path.join(' → ')}</div>}
       {entry.decoded_text !== null && (
         <div className="decode-block">
           <div className="decode-block-header">
@@ -96,6 +98,8 @@ function AltEntry({ entry }: { entry: DecodedEntry }) {
       </button>
       {expanded && (
         <div className="decode-alt-body">
+          {entry.notes?.map(note => <div key={note} className="decode-meta">{note}</div>)}
+          {entry.path && <div className="decode-meta">경로: {entry.path.join(' → ')}</div>}
           {entry.decoded_text !== null && (
             <div className="decode-block">
               <div className="decode-block-header">
@@ -141,7 +145,7 @@ export function DecodePanel({ result }: DecodePanelProps) {
         <div className="decode-alternatives">
           <h3 className="decode-alternatives-title">{dm.otherInterpretations}</h3>
           {alternatives.map((entry) => (
-            <AltEntry key={entry.encoding} entry={entry} />
+            <AltEntry key={`${entry.encoding}-${entry.path?.join('-') ?? ''}-${entry.hex_string}`} entry={entry} />
           ))}
         </div>
       )}

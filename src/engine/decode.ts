@@ -1,3 +1,6 @@
+import { decodeTextFormats, decodeBase36, decodeBase45 } from './utils/extra-text';
+import { decodeBase85Variants } from './utils/base85-variants';
+import { decodeJwt, decodeBase58Check } from './utils/structured';
 import type { DecodeResult, DecodedEntry, DecodingType } from '@/types';
 import { isHex, isBase62, isCrockfordBase32, isBase32Hex, isBase32Std, isBase58 } from './utils/charset';
 import { hexToBytes, bytesToHex } from './utils/hex';
@@ -9,9 +12,9 @@ const BASE64_STANDARD_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 const BASE64_URL_RE = /^[A-Za-z0-9_-]+={0,2}$/;
 const HEX4_RE = /^[0-9a-fA-F]{4}$/;
 
-function bytesToUtf8(bytes: Uint8Array): string | null {
+function bytesToUtf8(bytes: Uint8Array, charset = 'utf-8'): string | null {
   try {
-    const decoder = new TextDecoder('utf-8', { fatal: true });
+    const decoder = new TextDecoder(charset, { fatal: true });
     return decoder.decode(bytes);
   } catch {
     return null;
@@ -102,6 +105,16 @@ const NON_PRINTABLE_RE = /[\x00-\x08\x0e-\x1f\x7f]/;
 
 const SPECIFICITY: Record<DecodingType, number> = {
   'unicode-escape': 4,
+  'url-encoded': 6,
+  'html-entity': 6,
+  'javascript-escape': 6,
+  'jwt': 9,
+  'base58check': 8,
+  'base36': -4,
+  'base45': -3,
+  'ascii85': 1,
+  'base85': 0,
+  'z85': 0,
   hex: 3,
   base32std: 2,
   base58: 2,
@@ -124,18 +137,19 @@ function scoreEntry(entry: DecodedEntry, hasPadding: boolean): number {
   return s;
 }
 
-function makeEntry(encoding: DecodingType, bytes: Uint8Array): DecodedEntry {
+function makeEntry(encoding: DecodingType, bytes: Uint8Array, charset = 'utf-8', notes?: string[]): DecodedEntry {
   return {
     encoding,
     decoded_bytes: bytes,
-    decoded_text: bytesToUtf8(bytes),
+    decoded_text: bytesToUtf8(bytes, charset),
+    notes,
     hex_string: bytesToHex(bytes),
     byte_length: bytes.length,
     bit_length: bytes.length * 8,
   };
 }
 
-export function decode(input: string): DecodeResult {
+export function decode(input: string, charset = 'utf-8', maxDepth = 1): DecodeResult {
   const trimmed = input.trim();
 
   if (trimmed.length === 0) {
@@ -214,6 +228,21 @@ export function decode(input: string): DecodeResult {
     }
   }
 
+  // Strongly signaled formats precede generic alphabet-based alternatives.
+  const extras = [
+    ...decodeTextFormats(trimmed),
+    ...decodeBase85Variants(trimmed),
+    decodeBase58Check(trimmed),
+    decodeJwt(trimmed),
+    decodeBase45(trimmed),
+    decodeBase36(trimmed),
+  ];
+  for (const extra of extras) {
+    if (extra) entries.push(makeEntry(extra.encoding, extra.bytes, charset, extra.notes));
+  }
+  // The original decode path uses UTF-8; reinterpret bytes using the selected charset.
+  for (const entry of entries) entry.decoded_text = bytesToUtf8(entry.decoded_bytes, charset);
+
   if (entries.length === 0) {
     return { input, entries: [], error: '디코딩할 수 없는 형식입니다' };
   }
@@ -221,5 +250,28 @@ export function decode(input: string): DecodeResult {
   const hasPadding = /=+$/.test(trimmed);
   entries.sort((a, b) => scoreEntry(b, hasPadding) - scoreEntry(a, hasPadding));
 
+  // Bounded exploration. Avoid cycles and exponential explosion from overlapping alphabets.
+  if (maxDepth > 1) {
+    const seen = new Set([trimmed]);
+    const queue = entries.slice(0, 8).map(entry => ({ entry, depth: 1, path: [entry.encoding] }));
+    const nested: DecodedEntry[] = [];
+    let processed = 0;
+    while (queue.length && processed < 32) {
+      const node = queue.shift()!;
+      processed++;
+      const value = node.entry.decoded_text;
+      if (!value || node.depth >= Math.min(3, maxDepth) || value.length > 512 || seen.has(value) || !/^[\x20-\x7e]+$/.test(value)) continue;
+      seen.add(value);
+      const children = decode(value, charset, 1).entries.slice(0, 4);
+      for (const child of children) {
+        if (child.decoded_text === value) continue;
+        const path = [...node.path, child.encoding];
+        const enhanced = { ...child, depth: node.depth + 1, path };
+        nested.push(enhanced);
+        if (queue.length + nested.length < 32) queue.push({ entry: enhanced, depth: node.depth + 1, path });
+      }
+    }
+    entries.push(...nested);
+  }
   return { input, entries };
 }

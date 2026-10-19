@@ -70,7 +70,7 @@ export type ParserFn = (
   bytes?: Uint8Array,
 ) => ParseResult;
 
-export type DecodingType = 'unicode-escape' | 'base64' | 'hex' | 'base32' | 'base32std' | 'base32hex' | 'base58' | 'base62';
+export type DecodingType = 'unicode-escape' | 'base64' | 'hex' | 'base32' | 'base32std' | 'base32hex' | 'base58' | 'base62' | 'url-encoded' | 'html-entity' | 'javascript-escape' | 'base36' | 'base45' | 'ascii85' | 'base85' | 'z85' | 'base58check' | 'jwt';
 
 export interface DecodedEntry {
   encoding: DecodingType;
@@ -79,6 +79,9 @@ export interface DecodedEntry {
   hex_string: string;
   byte_length: number;
   bit_length: number;
+  notes?: string[];
+  depth?: number;
+  path?: string[];
 }
 
 export interface DecodeResult {
